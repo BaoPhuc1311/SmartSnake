@@ -1,5 +1,5 @@
 import pygame
-from game import run_game
+from ui import run_game
 
 pygame.init()
 

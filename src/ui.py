@@ -1,11 +1,13 @@
 import pygame
 from snake import Snake
 from food import Food
+from obstacle import Obstacle
 
 WIDTH, HEIGHT = 600, 400
 CELL_SIZE = 30
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+GOLD = (255, 215, 0)
 
 DIRECTIONS = {
     pygame.K_UP: (0, -CELL_SIZE),
@@ -33,46 +35,15 @@ def get_head_direction(snake):
         return "down"
     return "right"
 
-def get_body_image(segment, prev_segment, next_segment, images):
-    prev_x, prev_y = prev_segment
-    curr_x, curr_y = segment
-    next_x, next_y = next_segment
-
-    from_prev = (curr_x - prev_x, curr_y - prev_y)
-    to_next = (next_x - curr_x, next_y - curr_y)
-
-    if to_next == (0, 0):
-        return images["body_horizontal"]
-
-    if from_prev == to_next:
-        if from_prev[0] != 0:
-            return images["body_horizontal"]
-        else:
-            return images["body_vertical"]
-
-    if from_prev == (0, -CELL_SIZE) and to_next == (CELL_SIZE, 0):
-        return images["body_topright"]
-    elif from_prev == (0, -CELL_SIZE) and to_next == (-CELL_SIZE, 0):
-        return images["body_topleft"]
-    elif from_prev == (0, CELL_SIZE) and to_next == (CELL_SIZE, 0):
-        return images["body_bottomright"]
-    elif from_prev == (0, CELL_SIZE) and to_next == (-CELL_SIZE, 0):
-        return images["body_bottomleft"]
-    elif from_prev == (-CELL_SIZE, 0) and to_next == (0, -CELL_SIZE):
-        return images["body_topleft"]
-    elif from_prev == (-CELL_SIZE, 0) and to_next == (0, CELL_SIZE):
-        return images["body_bottomleft"]
-    elif from_prev == (CELL_SIZE, 0) and to_next == (0, -CELL_SIZE):
-        return images["body_topright"]
-    elif from_prev == (CELL_SIZE, 0) and to_next == (0, CELL_SIZE):
-        return images["body_bottomright"]
-
-    return images["body_horizontal"]
-
-def get_tail_direction(tail, prev_segment):
+def get_tail_direction(tail, prev_segment, snake):
     tail_x, tail_y = tail
     prev_x, prev_y = prev_segment
     dir_x, dir_y = tail_x - prev_x, tail_y - prev_y
+
+    if dir_x == 0 and dir_y == 0:
+        dir_x, dir_y = snake.direction
+        dir_x, dir_y = -dir_x, -dir_y
+
     if dir_x == CELL_SIZE:
         return "right"
     elif dir_x == -CELL_SIZE:
@@ -82,6 +53,63 @@ def get_tail_direction(tail, prev_segment):
     elif dir_y == CELL_SIZE:
         return "down"
     return "right"
+
+def get_body_image(segment, segments, index, images):
+    prev_segment = segments[index - 1] if index > 0 else None
+    next_segment = segments[index + 1] if index < len(segments) - 1 else None
+
+    from_prev = (0, 0)
+    to_next = (0, 0)
+
+    if prev_segment:
+        from_prev = (segment[0] - prev_segment[0], segment[1] - prev_segment[1])
+    if next_segment:
+        to_next = (next_segment[0] - segment[0], next_segment[1] - segment[1])
+
+    if from_prev == to_next:
+        if from_prev[0] != 0:
+            return images["body_horizontal"]
+        else:
+            return images["body_vertical"]
+
+    if (from_prev == (-CELL_SIZE, 0) and to_next == (0, -CELL_SIZE)):
+        return images["body_topright"]
+    elif (from_prev == (CELL_SIZE, 0) and to_next == (0, -CELL_SIZE)):
+        return images["body_topleft"]
+    elif (from_prev == (-CELL_SIZE, 0) and to_next == (0, CELL_SIZE)):
+        return images["body_bottomright"]
+    elif (from_prev == (CELL_SIZE, 0) and to_next == (0, CELL_SIZE)):
+        return images["body_bottomleft"]
+    elif (from_prev == (0, -CELL_SIZE) and to_next == (-CELL_SIZE, 0)):
+        return images["body_bottomleft"]
+    elif (from_prev == (0, CELL_SIZE) and to_next == (-CELL_SIZE, 0)):
+        return images["body_topleft"]
+    elif (from_prev == (0, -CELL_SIZE) and to_next == (CELL_SIZE, 0)):
+        return images["body_bottomright"]
+    elif (from_prev == (0, CELL_SIZE) and to_next == (CELL_SIZE, 0)):
+        return images["body_topright"]
+
+    return images["body_horizontal"]
+
+def draw_score(screen, score, font):
+    score_text_border = font.render(f"Score: {score}", True, BLACK)
+    score_text = font.render(f"Score: {score}", True, GOLD)
+    
+    text_width = score_text.get_width()
+    text_x = WIDTH // 2 - text_width // 2
+    text_y = 10
+
+    for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2), (0, -2), (0, 2), (-2, 0), (2, 0)]:
+        screen.blit(score_text_border, (text_x + dx, text_y + dy))
+    screen.blit(score_text, (text_x, text_y))
+
+def draw_food(screen, food, food_img):
+    pos = food.get_position()
+    screen.blit(food_img, pos)
+
+def draw_obstacles(screen, obstacles, wall_img):
+    for pos in obstacles.get_obstacles():
+        screen.blit(wall_img, pos)
 
 def draw_snake(screen, snake, images):
     snake_body = snake.get_body()
@@ -96,53 +124,21 @@ def draw_snake(screen, snake, images):
     if len(snake_body) == 2:
         tail = snake_body[-1]
         prev_segment = snake_body[-2]
-        tail_direction = get_tail_direction(tail, prev_segment)
+        tail_direction = get_tail_direction(tail, prev_segment, snake)
         tail_img = images[f"tail_{tail_direction}"]
         screen.blit(tail_img, tail)
         return
 
     for i in range(1, len(snake_body) - 1):
         segment = snake_body[i]
-        prev_segment = snake_body[i - 1]
-        next_segment = snake_body[i + 1]
-
-        prev_x, prev_y = prev_segment
-        curr_x, curr_y = segment
-        next_x, next_y = next_segment
-        from_prev = (curr_x - prev_x, curr_y - prev_y)
-        to_next = (next_x - curr_x, next_y - curr_y)
-
-        if to_next == (0, 0):
-            body_img = images["body_horizontal"]
-        else:
-            body_img = get_body_image(segment, prev_segment, next_segment, images)
+        body_img = get_body_image(segment, snake_body, i, images)
         screen.blit(body_img, segment)
 
     tail = snake_body[-1]
     prev_segment = snake_body[-2]
-    tail_direction = get_tail_direction(tail, prev_segment)
+    tail_direction = get_tail_direction(tail, prev_segment, snake)
     tail_img = images[f"tail_{tail_direction}"]
     screen.blit(tail_img, tail)
-
-def draw_food(screen, food, food_img):
-    screen.blit(food_img, food.get_position())
-
-def draw_score(screen, score, font):
-    score_text = font.render(f"Score: {score}", True, BLACK)
-    screen.blit(score_text, (10, 10))
-
-def draw_game_over(screen, score, font):
-    game_over_text = font.render("Game Over!", True, BLACK)
-    score_text = font.render(f"Final Score: {score}", True, BLACK)
-    restart_text = font.render("Press R to Restart", True, BLACK)
-    
-    screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - 50))
-    screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 2))
-    screen.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 + 50))
-
-def draw_pause_screen(screen, font):
-    pause_text = font.render("Game Paused - Press P to Resume", True, BLACK)
-    screen.blit(pause_text, (WIDTH // 2 - pause_text.get_width() // 2, HEIGHT // 2))
 
 def draw_menu(screen, font, selected_mode):
     menu_bg = pygame.Surface((WIDTH, HEIGHT))
@@ -160,36 +156,69 @@ def draw_menu(screen, font, selected_mode):
     screen.blit(ai_text, (WIDTH // 2 - ai_text.get_width() // 2, HEIGHT // 2 + 10))
     screen.blit(start_text, (WIDTH // 2 - start_text.get_width() // 2, HEIGHT // 2 + 80))
 
+def draw_pause_screen(screen, font):
+    pause_text = font.render("Game Paused - Press P to Resume", True, BLACK)
+    screen.blit(pause_text, (WIDTH // 2 - pause_text.get_width() // 2, HEIGHT // 2))
+
+def draw_game_over(screen, score, font):
+    game_over_text = font.render("Game Over!", True, BLACK)
+    score_text = font.render(f"Final Score: {score}", True, BLACK)
+    restart_text = font.render("Press R to Restart", True, BLACK)
+    
+    screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - 50))
+    screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 2))
+    screen.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 + 50))
+
 def run_game():
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("SmartSnake Game")
     clock = pygame.time.Clock()
 
-    images = {
-        "head_up": pygame.image.load("assets/images/head_up.png").convert_alpha(),
-        "head_down": pygame.image.load("assets/images/head_down.png").convert_alpha(),
-        "head_left": pygame.image.load("assets/images/head_left.png").convert_alpha(),
-        "head_right": pygame.image.load("assets/images/head_right.png").convert_alpha(),
-        "body_horizontal": pygame.image.load("assets/images/body_horizontal.png").convert_alpha(),
-        "body_vertical": pygame.image.load("assets/images/body_vertical.png").convert_alpha(),
-        "body_topleft": pygame.image.load("assets/images/body_topleft.png").convert_alpha(),
-        "body_topright": pygame.image.load("assets/images/body_topright.png").convert_alpha(),
-        "body_bottomleft": pygame.image.load("assets/images/body_bottomleft.png").convert_alpha(),
-        "body_bottomright": pygame.image.load("assets/images/body_bottomright.png").convert_alpha(),
-        "tail_up": pygame.image.load("assets/images/tail_up.png").convert_alpha(),
-        "tail_down": pygame.image.load("assets/images/tail_down.png").convert_alpha(),
-        "tail_left": pygame.image.load("assets/images/tail_left.png").convert_alpha(),
-        "tail_right": pygame.image.load("assets/images/tail_right.png").convert_alpha(),
-    }
-    food_img = pygame.image.load("assets/images/apple.png").convert_alpha()
-    start_background = pygame.image.load("assets/images/start_game.png").convert()
-    game_background = pygame.image.load("assets/images/background.png").convert()
-    
-    font = pygame.font.SysFont("Arial", 24)
+    try:
+        images = {
+            "head_up": pygame.image.load("assets/images/head_up.png").convert_alpha(),
+            "head_down": pygame.image.load("assets/images/head_down.png").convert_alpha(),
+            "head_left": pygame.image.load("assets/images/head_left.png").convert_alpha(),
+            "head_right": pygame.image.load("assets/images/head_right.png").convert_alpha(),
+            "body_horizontal": pygame.image.load("assets/images/body_horizontal.png").convert_alpha(),
+            "body_vertical": pygame.image.load("assets/images/body_vertical.png").convert_alpha(),
+            "body_topleft": pygame.image.load("assets/images/body_topleft.png").convert_alpha(),
+            "body_topright": pygame.image.load("assets/images/body_topright.png").convert_alpha(),
+            "body_bottomleft": pygame.image.load("assets/images/body_bottomleft.png").convert_alpha(),
+            "body_bottomright": pygame.image.load("assets/images/body_bottomright.png").convert_alpha(),
+            "tail_up": pygame.image.load("assets/images/tail_up.png").convert_alpha(),
+            "tail_down": pygame.image.load("assets/images/tail_down.png").convert_alpha(),
+            "tail_left": pygame.image.load("assets/images/tail_left.png").convert_alpha(),
+            "tail_right": pygame.image.load("assets/images/tail_right.png").convert_alpha(),
+        }
+    except pygame.error as e:
+        print(f"Error loading snake images: {e}")
+        pygame.quit()
+        return
 
-    snake = Snake((100, 100), CELL_SIZE, WIDTH, HEIGHT)
-    food = Food(WIDTH, HEIGHT, CELL_SIZE)
+    try:
+        food_img = pygame.image.load("assets/images/apple.png").convert_alpha()
+    except pygame.error as e:
+        print(f"Error loading apple.png: {e}")
+        pygame.quit()
+        return
+    
+    try:
+        wall_img = pygame.image.load("assets/images/wall.png").convert_alpha()
+        start_background = pygame.image.load("assets/images/start_game.png").convert()
+        game_background = pygame.image.load("assets/images/background.png").convert()
+    except pygame.error as e:
+        print(f"Error loading background images: {e}")
+        pygame.quit()
+        return
+    
+    font = pygame.font.SysFont("Arial", 36)
+
+    snake = Snake((90, 90), CELL_SIZE, WIDTH, HEIGHT)
+    food = Food(WIDTH, HEIGHT, CELL_SIZE, lambda: [], snake.get_body)
+    obstacles = Obstacle(WIDTH, HEIGHT, CELL_SIZE, snake.get_head, food.get_position())
+    
     score = 0
     game_over = False
     game_started = False
@@ -218,8 +247,9 @@ def run_game():
                         pygame.display.flip()
                 elif game_over:
                     if event.key == pygame.K_r:
-                        snake = Snake((100, 100), CELL_SIZE, WIDTH, HEIGHT)
-                        food = Food(WIDTH, HEIGHT, CELL_SIZE)
+                        snake = Snake((90, 90), CELL_SIZE, WIDTH, HEIGHT)
+                        food = Food(WIDTH, HEIGHT, CELL_SIZE, lambda: [], snake.get_body)
+                        obstacles = Obstacle(WIDTH, HEIGHT, CELL_SIZE, snake.get_head, food.get_position())
                         score = 0
                         game_over = False
                         paused = False
@@ -239,8 +269,24 @@ def run_game():
                     if game_mode == "ai":
                         pass
                     else:
-                        if not snake.move():
+                        head_x, head_y = snake.get_head()
+                        dir_x, dir_y = snake.direction
+                        next_head_x = head_x + dir_x
+                        next_head_y = head_y + dir_y
+
+                        if next_head_x < 0 or next_head_x >= WIDTH or next_head_y < 0 or next_head_y >= HEIGHT:
                             game_over = True
+                        else:
+                            next_head_rect = pygame.Rect(next_head_x, next_head_y, CELL_SIZE, CELL_SIZE)
+                            for obstacle_pos in obstacles.get_obstacles():
+                                obstacle_rect = pygame.Rect(obstacle_pos[0], obstacle_pos[1], CELL_SIZE, CELL_SIZE)
+                                if is_collision(next_head_rect, obstacle_rect):
+                                    game_over = True
+                                    break
+
+                        if not game_over:
+                            if not snake.move():
+                                game_over = True
 
                     snake_rect = pygame.Rect(*snake.get_head(), CELL_SIZE, CELL_SIZE)
                     food_rect = pygame.Rect(*food.get_position(), CELL_SIZE, CELL_SIZE)
@@ -248,8 +294,10 @@ def run_game():
                     if is_collision(snake_rect, food_rect):
                         snake.grow()
                         food.spawn_new_food()
+                        obstacles = Obstacle(WIDTH, HEIGHT, CELL_SIZE, snake.get_head, food.get_position())
                         score += 10
 
+                draw_obstacles(screen, obstacles, wall_img)
                 draw_snake(screen, snake, images)
                 draw_food(screen, food, food_img)
                 draw_score(screen, score, font)
@@ -260,6 +308,6 @@ def run_game():
                 draw_game_over(screen, score, font)
 
         pygame.display.flip()
-        clock.tick(10)
+        clock.tick(7)
 
     pygame.quit()

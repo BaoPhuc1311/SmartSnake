@@ -2,6 +2,7 @@ import pygame
 from snake import Snake
 from food import Food
 from obstacle import Obstacle
+from a_star import find_path_with_astar
 
 WIDTH, HEIGHT = 600, 400
 CELL_SIZE = 30
@@ -225,6 +226,7 @@ def run_game():
     paused = False
     game_mode = "human"
     selected_mode = "human"
+    current_path = None
 
     running = True
     while running:
@@ -253,6 +255,7 @@ def run_game():
                         score = 0
                         game_over = False
                         paused = False
+                        current_path = None
                         screen.blit(game_background, (0, 0))
                         pygame.display.flip()
                 else:
@@ -266,27 +269,66 @@ def run_game():
         else:
             if not game_over:
                 if not paused:
-                    if game_mode == "ai":
-                        pass
+                    head_x, head_y = snake.get_head()
+                    dir_x, dir_y = snake.direction
+                    next_head_x = head_x + dir_x
+                    next_head_y = head_y + dir_y
+
+                    collision_detected = False
+                    if next_head_x < 0 or next_head_x >= WIDTH or next_head_y < 0 or next_head_y >= HEIGHT:
+                        game_over = True
+                        collision_detected = True
                     else:
-                        head_x, head_y = snake.get_head()
-                        dir_x, dir_y = snake.direction
-                        next_head_x = head_x + dir_x
-                        next_head_y = head_y + dir_y
-
-                        if next_head_x < 0 or next_head_x >= WIDTH or next_head_y < 0 or next_head_y >= HEIGHT:
-                            game_over = True
-                        else:
-                            next_head_rect = pygame.Rect(next_head_x, next_head_y, CELL_SIZE, CELL_SIZE)
-                            for obstacle_pos in obstacles.get_obstacles():
-                                obstacle_rect = pygame.Rect(obstacle_pos[0], obstacle_pos[1], CELL_SIZE, CELL_SIZE)
-                                if is_collision(next_head_rect, obstacle_rect):
-                                    game_over = True
-                                    break
-
-                        if not game_over:
-                            if not snake.move():
+                        next_head_rect = pygame.Rect(next_head_x, next_head_y, CELL_SIZE, CELL_SIZE)
+                        for obstacle_pos in obstacles.get_obstacles():
+                            obstacle_rect = pygame.Rect(obstacle_pos[0], obstacle_pos[1], CELL_SIZE, CELL_SIZE)
+                            if is_collision(next_head_rect, obstacle_rect):
                                 game_over = True
+                                collision_detected = True
+                                break
+
+                    if game_mode == "ai":
+                        start = snake.get_head()
+                        goal = food.get_position()
+                        if current_path is None or not current_path:
+                            current_path = find_path_with_astar(start, goal, obstacles.get_obstacles(), snake.get_body(), WIDTH, HEIGHT, CELL_SIZE)
+                        
+                        if current_path:
+                            next_pos = (current_path[0][0] * CELL_SIZE, current_path[0][1] * CELL_SIZE)
+                            dir_x = next_pos[0] - start[0]
+                            dir_y = next_pos[1] - start[1]
+                            snake.set_direction((dir_x, dir_y))
+                            current_path.pop(0)
+                            if not current_path:
+                                current_path = None
+                        else:
+                            possible_directions = [(0, CELL_SIZE), (0, -CELL_SIZE), (CELL_SIZE, 0), (-CELL_SIZE, 0)]
+                            direction_found = False
+                            for dir_x, dir_y in possible_directions:
+                                next_head_x = start[0] + dir_x
+                                next_head_y = start[1] + dir_y
+                                if next_head_x < 0 or next_head_x >= WIDTH or next_head_y < 0 or next_head_y >= HEIGHT:
+                                    continue
+                                next_head_rect = pygame.Rect(next_head_x, next_head_y, CELL_SIZE, CELL_SIZE)
+                                collision = False
+                                for obstacle_pos in obstacles.get_obstacles():
+                                    obstacle_rect = pygame.Rect(obstacle_pos[0], obstacle_pos[1], CELL_SIZE, CELL_SIZE)
+                                    if is_collision(next_head_rect, obstacle_rect):
+                                        collision = True
+                                        break
+                                snake_body = snake.get_body()
+                                if (next_head_x, next_head_y) in snake_body[1:]:
+                                    collision = True
+                                if not collision:
+                                    snake.set_direction((dir_x, dir_y))
+                                    direction_found = True
+                                    break
+                            if not direction_found:
+                                dir_x, dir_y = snake.direction
+
+                    if not game_over and not collision_detected:
+                        if not snake.move():
+                            game_over = True
 
                     snake_rect = pygame.Rect(*snake.get_head(), CELL_SIZE, CELL_SIZE)
                     food_rect = pygame.Rect(*food.get_position(), CELL_SIZE, CELL_SIZE)
@@ -296,6 +338,7 @@ def run_game():
                         food.spawn_new_food()
                         obstacles = Obstacle(WIDTH, HEIGHT, CELL_SIZE, snake.get_head, food.get_position())
                         score += 10
+                        current_path = None
 
                 draw_obstacles(screen, obstacles, wall_img)
                 draw_snake(screen, snake, images)

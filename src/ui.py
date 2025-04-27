@@ -3,23 +3,7 @@ from snake import Snake
 from food import Food
 from obstacle import Obstacle
 from a_star import find_path_with_astar
-
-WIDTH, HEIGHT = 600, 400
-CELL_SIZE = 30
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GOLD = (255, 215, 0)
-
-DIRECTIONS = {
-    pygame.K_UP: (0, -CELL_SIZE),
-    pygame.K_DOWN: (0, CELL_SIZE),
-    pygame.K_LEFT: (-CELL_SIZE, 0),
-    pygame.K_RIGHT: (CELL_SIZE, 0),
-    pygame.K_w: (0, -CELL_SIZE),
-    pygame.K_s: (0, CELL_SIZE),
-    pygame.K_a: (-CELL_SIZE, 0),
-    pygame.K_d: (CELL_SIZE, 0)
-}
+from config import WIDTH, HEIGHT, CELL_SIZE, WHITE, BLACK, GOLD, DIRECTIONS
 
 def is_collision(rect1, rect2):
     return rect1.colliderect(rect2)

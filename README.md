@@ -1,59 +1,63 @@
-# SmartSnake
+# 🐍 SmartSnake
 
-## Introduction:
-SmartSnake is an AI-powered Snake game that utilizes machine learning algorithms to improve gameplay. The game implements two core algorithms:
-- **Q-learning**: Reinforcement learning to train the AI agent to play the game.
-- **A\***: A heuristic search algorithm used to optimize the pathfinding of the snake.
+## 📖 Introduction
+SmartSnake is an AI-powered Snake game that leverages machine learning to enhance gameplay. The game integrates two core algorithms:
+- **Q-learning** 🧠: A reinforcement learning technique to train the AI agent for decision-making.
+- **A\*** 🌟: A heuristic search algorithm to optimize the snake's path to the food.
 
-The goal of this project is to build a Snake game where the AI can autonomously play and learn how to grow the snake to achieve higher scores.
+The project aims to create an intelligent Snake game where the AI learns to navigate, grow, and achieve higher scores autonomously.
 
-## Objective:
-- Create a Snake game where the AI uses **Q-learning** to make decisions based on state-action values.
-- Implement **A\*** search algorithm to find the shortest path to the food.
-- Allow the AI to learn and improve through training.
-- Provide a playable version of the game for both humans and AI-controlled snakes.
+## 🎯 Objective
+- Develop a Snake game where the AI uses **Q-learning** to make decisions based on state-action values.
+- Implement the **A\*** algorithm to find the shortest path to the food.
+- Enable the AI to improve its performance through iterative training.
+- Provide a dual-mode game for both AI-controlled and human-playable snakes.
 
-## Requirements:
-- Python 3.x
-- Pygame (for game rendering)
-- NumPy (for matrix manipulation)
+## 📋 Requirements
+- 🐍 Python 3.8+
+- 🎮 Pygame (`pygame`) for game rendering
+- 🔢 NumPy (`numpy`) for matrix operations
 
-## Installation
-Clone this repository and navigate to the project directory:
+## ⚙️ Installation
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   git clone https://github.com/BaoPhuc1311/SmartSnake.git
+   cd SmartSnake
+   ```
 
-```
-git clone https://github.com/BaoPhuc1311/SmartSnake.git
-cd SmartSnake
-```
+2. Install the required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Install the necessary dependencies:
-
-```
-pip install -r requirements.txt
-```
-
-## Usage
-To start the game and let the AI play:
-
-```
+## 🚀 Usage
+To play the game with the AI controlling the snake:
+```bash
 python src/main.py
 ```
 
-To manually control the snake, run the game in human mode:
-
-```
+To play the game manually (human mode):
+```bash
 python src/human_mode.py
 ```
 
-## Training the AI
-To train the AI using Q-learning, run:
+**Note**: Ensure you have a compatible Python environment and dependencies installed before running the game.
 
-```
+## 🧠 Training the AI
+To train the AI using Q-learning:
+```bash
 python src/train_qlearning.py
 ```
 
-## Contributing
-Feel free to fork the repository, submit issues, or send pull requests. Contributions are welcome!
+The training process saves the Q-table to `src/qtable.npy` for reuse. You can adjust hyperparameters in `src/train_qlearning.py` to fine-tune the AI's performance.
 
-## License
-This project is licensed under the MIT License
+## 🤝 Contributing
+Contributions are welcome! To contribute:
+1. Fork the repository 🍴.
+2. Create a new branch for your feature or bug fix.
+3. Submit a pull request with a clear description of your changes.
+
+Please report issues or suggest improvements via the [Issues](https://github.com/BaoPhuc1311/SmartSnake/issues) tab.
+
+## 📜 License
+This project is licensed under the [MIT License](LICENSE).
